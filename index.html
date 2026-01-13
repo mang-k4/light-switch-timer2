@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Smart Home 4CH</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<style>
+body {
+  font-family: sans-serif;
+  background: #eef2f5;
+  text-align: center;
+}
+.card {
+  background: white;
+  padding: 15px;
+  margin: 10px auto;
+  max-width: 420px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,.1);
+}
+button {
+  padding: 8px 14px;
+  margin: 5px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.on { background:#28a745; color:white; }
+.off { background:#dc3545; color:white; }
+.auto { background:#007bff; color:white; }
+input[type=time] {
+  padding:5px;
+}
+.status {
+  margin-top: 5px;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Smart Home 4CH</h2>
+
+<div id="panel"></div>
+
+<script>
+/* ---------- Firebase Config ---------- */
+firebase.initializeApp({
+  apiKey: "AIzaSyCpm-ASXEoZNI09ehc8YF3MIk_4yxXvXbI",
+  databaseURL: "https://home-front-light-default-rtdb.asia-southeast1.firebasedatabase.app/"
+});
+const db = firebase.database();
+
+/* ---------- UI ---------- */
+const names = ["ห้องนั่งเล่น","ห้องนอน","ห้องครัว","รั้วหน้าบ้าน"];
+const panel = document.getElementById("panel");
+
+for(let i=1;i<=4;i++){
+  panel.innerHTML += `
+  <div class="card">
+    <h3>${names[i-1]}</h3>
+
+    <button class="on" onclick="manual(${i},1)">เปิด</button>
+    <button class="off" onclick="manual(${i},0)">ปิด</button>
+    <button class="auto" onclick="auto(${i})">Auto</button>
+
+    <div>
+      เปิด <input type="time" id="on${i}">
+      ปิด <input type="time" id="off${i}">
+      <button onclick="saveTime(${i})">บันทึกเวลา</button>
+    </div>
+
+    <div class="status" id="st${i}">---</div>
+  </div>`;
+}
+
+/* ---------- Actions ---------- */
+function manual(i,val){
+  db.ref(`controls/sw${i}`).update({
+    mode:"manual",
+    state:val
+  });
+}
+
+function auto(i){
+  db.ref(`controls/sw${i}/mode`).set("auto");
+}
+
+function saveTime(i){
+  const on  = document.getElementById(`on${i}`).value;
+  const off = document.getElementById(`off${i}`).value;
+  if(!on || !off){ alert("กรุณาเลือกเวลา"); return; }
+  db.ref(`controls/sw${i}`).update({ on:on, off:off });
+}
+
+/* ---------- Listener ---------- */
+db.ref("controls").on("value", snap=>{
+  const d = snap.val();
+  if(!d) return;
+
+  for(let i=1;i<=4;i++){
+    const sw = d["sw"+i];
+    if(!sw) continue;
+
+    document.getElementById(`on${i}`).value  = sw.on  || "";
+    document.getElementById(`off${i}`).value = sw.off || "";
+
+    let text = "";
+    if(sw.mode==="auto") text = "AUTO ⏰";
+    else text = sw.state ? "เปิดอยู่ 🟢" : "ปิดอยู่ 🔴";
+
+    document.getElementById(`st${i}`).innerText = text;
+  }
+});
+</script>
+
+</body>
+</html>
